@@ -1,0 +1,13 @@
+# Framework web
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+
+# Validación y configuración
+pydantic==2.13.3
+pydantic-settings==2.14.0
+
+# LangChain e integraciones con proveedores LLM
+langchain==1.2.15
+langchain-openai==1.2.1
+langchain-anthropic==1.4.1
+langchain-ollama==1.1.0
