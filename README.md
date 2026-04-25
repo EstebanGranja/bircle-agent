@@ -80,7 +80,7 @@ cp .env.example .env  # Editar el .env con el proveedor LLM elegido
 
 ## Configuración del proveedor LLM
 
-El proyecto soporta tres proveedores configurables por variable de entorno.
+El proyecto soporta tres proveedores configurables por variable de entorno
 
 ### Opción A: Ollama (recomendada para desarrollo local)
 
@@ -174,7 +174,7 @@ Procesa un turno conversacional. El historial se mantiene en memoria asociado al
 
 ### `DELETE /session/{session_id}`
 
-Elimina el historial de una sesión. Útil para reiniciar conversaciones sin esperar al reinicio del servicio.
+Elimina el historial de una sesión. Útil para reiniciar conversaciones sin esperar al reinicio del servicio
 
 - `204 No Content`: la sesión existía y se borró
 - `404 Not Found`: no existía sesión con ese ID
@@ -364,13 +364,13 @@ curl http://localhost:8000/health
 
 ### Usando Ollama desde el contenedor
 
-Si `LLM_PROVIDER=ollama` y el daemon de Ollama corre en el **host** (no en otro contenedor), el default `OLLAMA_BASE_URL=http://localhost:11434` **no funciona** dentro del contenedor: `localhost` resuelve al contenedor mismo, no al host.
+Si `LLM_PROVIDER=ollama` y el daemon de Ollama corre en el **host** (no en otro contenedor), el default `OLLAMA_BASE_URL=http://localhost:11434` **no funciona** dentro del contenedor: `localhost` resuelve al contenedor mismo, no al host
 
 - **Docker Desktop (Windows / macOS)**: usar `host.docker.internal`:
   ```env
   OLLAMA_BASE_URL=http://host.docker.internal:11434
   ```
-- **Linux**: o bien correr el contenedor con `--network=host` (y dejar `localhost`), o bien agregar `--add-host=host.docker.internal:host-gateway` y usar la misma URL que en Docker Desktop.
+- **Linux**: o bien correr el contenedor con `--network=host` (y dejar `localhost`), o bien agregar `--add-host=host.docker.internal:host-gateway` y usar la misma URL que en Docker Desktop
 
 Ejemplo en Docker Desktop:
 
@@ -385,12 +385,29 @@ docker run -d \
 
 ---
 
+## Tests
+
+Suite de tests con `pytest`. No requieren API keys reales: los proveedores cloud se validan con keys ficticias y el AgentService se reemplaza por un fake para no gastar créditos
+
+```bash
+cd bircle-agent
+pytest -v
+```
+
+| Archivo | Qué cubre |
+|---|---|
+| `tests/test_message.py` | Construcción correcta del cliente para los 3 proveedores (Ollama / OpenAI / Anthropic), validación de `Settings` (api key obligatoria para cloud, opcional para Ollama), respuesta válida del endpoint `POST /message` para cada proveedor con `dependency_overrides`, y validación de input (422 ante `session_id` inválido o `message` vacío) |
+| `tests/test_classification.py` | Tests del parser con fallback de `structured_output.py`: aliases de intent/category, JSON malformado, campos faltantes y respuesta de fallback |
+| `tests/test_memory.py` | Tests de `MemoryStore`: aislamiento por `session_id`, truncado al exceder `max_history`, reset de sesión y thread-safety |
+
+---
+
 ## Bonus implementados
 
 De los puntos bonus de la consigna, este proyecto implementa:
 
-- **Reset de sesión**: `DELETE /session/{session_id}` para limpiar el historial.
-- **Validación reforzada del JSON del modelo**: parser dedicado en `app/llm/structured_output.py` que valida contra Pydantic.
-- **Mecanismo de fallback**: respuesta válida garantizada incluso si el modelo devuelve datos malformados.
-- **Soporte multi-proveedor**: Ollama (local), OpenAI y Anthropic configurables por env var.
+- **Reset de sesión**: `DELETE /session/{session_id}` para limpiar el historial
+- **Validación reforzada del JSON del modelo**: parser dedicado en `app/llm/structured_output.py` que valida contra Pydantic
+- **Mecanismo de fallback**: respuesta válida garantizada incluso si el modelo devuelve datos malformados
+- **Soporte multi-proveedor**: Ollama (local), OpenAI y Anthropic configurables por env var
 
