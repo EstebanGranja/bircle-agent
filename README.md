@@ -298,20 +298,13 @@ curl -X 'POST' \
 ![Swagger - Mensaje](docs/screenshots/queja-conv-2.png)
 
 ### Ejemplo 3: Reset de sesión
-```bash
-curl -X 'GET' \
-  'http://127.0.0.1:8000/stats' \
-  -H 'accept: application/json'
-```
+GET /stats
 ![Swagger - Mensaje](docs/screenshots/stats-prev.png)
 ```bash
 curl -X DELETE http://localhost:8000/session/demo-ventas
 ```
-```bash
-curl -X 'GET' \
-  'http://127.0.0.1:8000/stats' \
-  -H 'accept: application/json'
-```
+
+GET /stats
 ![Swagger - Mensaje](docs/screenshots/stats-post.png)
 
 ---
@@ -330,26 +323,15 @@ curl -X 'GET' \
 | `APP_ENVIRONMENT` | Entorno (`development` / `staging` / `production`) | `development` |
 
 ---
-
 ## Decisiones de diseño
 
-### Single LLM call
-La respuesta y la clasificación se generan en una sola llamada al LLM. Esto reduce latencia y costo a la mitad versus una arquitectura de dos llamadas.
+El objetivo fue mantener el sistema lo más simple posible sin sacrificar **robustez**
 
-### Estado en memoria con thread-safety
-El `MemoryStore` usa `threading.Lock` para proteger el acceso concurrente. Uvicorn por defecto puede correr handlers en threadpool, así que el lock es necesario aunque la app sea async.
+La decisión más importante fue hacer una **sola llamada** al LLM que resuelva tanto la respuesta conversacional como la clasificación. Separarlas en dos llamadas habría duplicado la latencia y el costo sin ninguna ventaja real
 
-### Truncado de historial
-Cuando el historial supera `MAX_SESSION_HISTORY`, se descartan los mensajes más viejos. Esto previene que el contexto crezca sin límite y exceda el token limit del modelo.
+Para la memoria, la elección fue en memoria del proceso, sin persistencia. La consigna no lo requiere y agregar una base de datos habría complejizado la arquitectura sin aportar valor demostrable en esta prueba
 
-### Fallback ante salidas malformadas
-El parser en `app/llm/structured_output.py` nunca lanza excepciones: si el modelo devuelve JSON inválido o no cumple el schema, devuelve un `MessageResponse` de fallback con `requires_human_escalation: true`. La API se mantiene estable incluso si el modelo se desvía del formato esperado.
-
-### Separación estricta de capas
-- **Routers** (`app/api/`): solo HTTP, no contienen lógica de negocio.
-- **Services** (`app/services/`): lógica pura, no importan FastAPI.
-- **Schemas** (`app/schemas/`): contratos Pydantic para validación.
-- **LLM** (`app/llm/`): toda la integración con el modelo aislada.
+El punto donde sí se invirtió más cuidado fue en el **manejo de errores del LLM**. Los modelos, especialmente los locales, ocasionalmente se desvían del formato esperado. El parser con fallback garantiza que la API siempre devuelve una respuesta válida, incluso cuando el modelo falla
 
 ---
 
@@ -361,8 +343,6 @@ El proyecto incluye un `Dockerfile` optimizado:
 - Cache eficiente de dependencias
 
 ### Build y ejecución
-
-Los comandos se ejecutan desde la **raíz del repo** (donde está el `Dockerfile`), no desde `bircle-agent/`. El build context tiene que ver `bircle-agent/app` y `bircle-agent/main.py` para copiarlos a la imagen.
 
 ```bash
 # Desde la raíz del repositorio
@@ -402,8 +382,6 @@ docker run -d \
   -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
   bircle-agent:latest
 ```
-
-> **Nota**: El Dockerfile fue desarrollado siguiendo las mejores prácticas de containerización Python pero no pudo ser testeado localmente por restricciones de permisos en el entorno de desarrollo. Se recomienda verificar el build.
 
 ---
 
