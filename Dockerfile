@@ -31,8 +31,10 @@ COPY --from=builder /root/.local /root/.local
 # Nos aseguramos de que los binarios instalados estén en el PATH
 ENV PATH=/root/.local/bin:$PATH
 
-# Copiamos el código de la aplicación
-COPY ./app ./app
+# Copiamos el código de la aplicación.
+# El entrypoint (main.py) y el paquete (app/) viven dentro de bircle-agent/.
+COPY ./bircle-agent/app ./app
+COPY ./bircle-agent/main.py ./main.py
 
 # Exponemos el puerto en el que corre uvicorn
 EXPOSE 8000
@@ -40,4 +42,5 @@ EXPOSE 8000
 # Comando para arrancar la aplicación.
 # --host 0.0.0.0 permite conexiones desde fuera del contenedor.
 # --port 8000 es el puerto estándar que exponemos.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# main:app porque main.py vive en /app (WORKDIR), no dentro del paquete app/.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
