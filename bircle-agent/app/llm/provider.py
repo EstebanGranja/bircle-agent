@@ -21,9 +21,6 @@ def get_llm() -> BaseChatModel:
             api_key=settings.llm_api_key,
             temperature=settings.llm_temperature,
             timeout=settings.llm_timeout_seconds,
-
-            # response_format fuerza al modelo a devolver JSON válido
-            model_kwargs={"response_format": {"type": "json_object"}},
         )
 
     if settings.llm_provider == "anthropic":
